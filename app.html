@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duel - Calendario Attività</title> <!-- Title remains same -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+    <style>
+        /* Specific styles for the main app page (from previous index.html) */
+        #particles-js-main { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; background-color: #eef2f7; }
+        #loading-state, #unauth-state { display: none; text-align: center; margin-top: 50px; padding: 2rem; }
+        #main-content { display: none; flex: 1; background-color: transparent; }
+        #calendar-section, #default-goals, footer { position: relative; z-index: 1; }
+        body { background-color: #eef2f7; } /* Kept light background for app */
+        #task-area.card, #default-goals .card, #calendar-section .card { background-color: rgba(255, 255, 255, 0.9); backdrop-filter: blur(3px); }
+        #calendar-grid { background-color: rgba(222, 226, 230, 0.7); }
+        .calendar-day { background-color: rgba(255, 255, 255, 0.8); }
+        .calendar-day.other-month { background-color: rgba(248, 249, 250, 0.7); }
+        .calendar-day.today { background-color: rgba(255, 243, 205, 0.85); }
+        .calendar-day.selected { background-color: rgba(13, 110, 253, 0.9); color: white; }
+        .calendar-day.selected:hover { background-color: rgba(11, 94, 215, 0.95); }
+        .calendar-header { background-color: rgba(248, 249, 250, 0.8); }
+    </style>
+</head>
+<body>
+    <div id="particles-js-main"></div> <!-- Particle container for main app -->
+
+    <!-- Loading State -->
+    <div id="loading-state" class="container">
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Caricamento...</span></div>
+            <p class="ms-3 mb-0 fs-5 text-muted">Verifica autenticazione...</p>
+        </div>
+    </div>
+
+     <!-- Unauthenticated State -->
+    <div id="unauth-state" class="container card shadow-sm" style="max-width: 500px; background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(3px);">
+         <div class="card-body text-center">
+            <h4 class="card-title text-danger">Accesso Richiesto</h4>
+            <p class="card-text">Per utilizzare il calendario attività, devi prima effettuare l'accesso.</p>
+            <a href="login.html" class="btn btn-primary">Vai al Login</a>
+        </div>
+    </div>
+
+    <!-- Main Content Area (Initially Hidden) -->
+    <div id="main-content">
+        <!-- Navigation Bar -->
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark fixed-top shadow-sm">
+            <div class="container">
+                <!-- MODIFIED LINK: Points to new welcome page (index.html) -->
+                <a class="navbar-brand" href="index.html">📅 Duel</a>
+                <!-- END MODIFIED LINK -->
+                <span class="navbar-text text-white-50 d-none d-sm-inline me-3 order-sm-2" id="welcome-message"></span>
+                <button class="navbar-toggler order-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+                <div class="collapse navbar-collapse order-sm-1" id="navbarNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-sm-0">
+                        <li class="nav-item"><a class="nav-link active" aria-current="page" href="#calendar-section">Calendario</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#default-goals">Obiettivi</a></li>
+                    </ul>
+                     <ul class="navbar-nav ms-auto order-sm-4">
+                          <li class="nav-item"><button id="logout-button" class="btn btn-outline-light btn-sm">Logout</button></li>
+                     </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Calendar and Tasks Section -->
+        <section id="calendar-section" class="py-4 py-md-5 mt-5">
+             <div class="container">
+                <div class="d-sm-none text-center my-3"><span class="text-muted small" id="welcome-message-sm"></span></div>
+                <h2 class="text-center mb-4 section-title">Calendario Attività</h2>
+                <div class="card shadow-sm mb-4">
+                     <div class="card-body d-flex justify-content-between align-items-center p-2">
+                         <button id="prev-month" class="btn btn-outline-secondary btn-sm border-0" title="Mese precedente">< Prec.</button>
+                         <h3 id="month-year" class="mb-0 h6 text-center mx-2 fw-bold"></h3>
+                         <button id="next-month" class="btn btn-outline-secondary btn-sm border-0" title="Mese successivo">Succ. ></button>
+                     </div>
+                </div>
+                <div id="calendar-grid" class="calendar-grid mb-4 mb-md-5 shadow-sm">
+                     <div class="calendar-header">Dom</div><div class="calendar-header">Lun</div><div class="calendar-header">Mar</div><div class="calendar-header">Mer</div><div class="calendar-header">Gio</div><div class="calendar-header">Ven</div><div class="calendar-header">Sab</div>
+                </div>
+                <div id="task-area" class="card shadow-sm">
+                     <div class="card-header bg-primary text-white"><h4 id="selected-date-display" class="mb-0 h6">Attività per: --</h4></div>
+                     <div class="card-body">
+                         <form id="add-task-form" class="mb-3 needs-validation" novalidate>
+                             <div class="input-group input-group-sm">
+                                 <input type="text" id="task-input" class="form-control" placeholder="Nuova attività..." required><input type="hidden" id="task-date-input" name="task_date">
+                                 <button class="btn btn-success" type="submit" id="add-task-btn" disabled title="Aggiungi"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></svg></button>
+                             </div><div class="invalid-feedback small">Inserisci il testo.</div>
+                         </form>
+                         <ul id="task-list" class="list-group list-group-flush"></ul>
+                         <p id="no-tasks-message" class="text-center text-muted mt-3 mb-0 small" style="display: none;"></p>
+                     </div>
+                </div>
+             </div>
+        </section>
+
+         <!-- Default Goals Section -->
+        <section id="default-goals" class="py-4 py-md-5 bg-light">
+             <div class="container">
+                <h2 class="text-center mb-5 section-title">Obiettivi Giornalieri</h2>
+                <div class="row">
+                     <div class="col-lg-4 col-md-6 mb-4"><div class="card h-100 shadow-sm"><div class="card-body d-flex align-items-center"><span class="fs-2 me-3">🏃‍♂️</span><div><h5 class="card-title mb-1">Attività Fisica</h5><p class="card-text mb-0 text-muted small">30 minuti di esercizio.</p></div></div></div></div>
+                     <div class="col-lg-4 col-md-6 mb-4"><div class="card h-100 shadow-sm"><div class="card-body d-flex align-items-center"><span class="fs-2 me-3">💧</span><div><h5 class="card-title mb-1">Idratazione</h5><p class="card-text mb-0 text-muted small">Bevi 2 litri di acqua.</p></div></div></div></div>
+                     <div class="col-lg-4 col-md-6 mb-4"><div class="card h-100 shadow-sm"><div class="card-body d-flex align-items-center"><span class="fs-2 me-3">📚</span><div><h5 class="card-title mb-1">Apprendimento</h5><p class="card-text mb-0 text-muted small">20 minuti di lettura/studio.</p></div></div></div></div>
+                </div>
+             </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-dark text-white-50 text-center py-3 mt-auto">
+             <div class="container"> <p class="mb-0 small">© 2024 Duel Project</p> </div>
+        </footer>
+    </div> <!-- /main-content -->
+
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Link to the main JS file containing auth check and app logic -->
+    <script src="js/script.js"></script>
+     <!-- Particle Init for Main App Page -->
+     <script>
+         document.addEventListener('DOMContentLoaded', () => { // Init particles when main content displayed
+             const observer = new MutationObserver((mutationsList) => { for(const mutation of mutationsList) { if (mutation.type === 'attributes' && mutation.attributeName === 'style') { const mainContent = document.getElementById('main-content'); if (mainContent && mainContent.style.display !== 'none') { tsParticles.load("particles-js-main", { fpsLimit: 60, interactivity: { events: { onHover: { enable: true, mode: "repulse" }, resize: true }, modes: { repulse: { distance: 80, duration: 0.4 } } }, particles: { color: { value: "#888888" }, links: { color: "#aaaaaa", distance: 130, enable: true, opacity: 0.3, width: 1 }, move: { direction: "none", enable: true, outModes: "bounce", random: true, speed: 1, straight: false }, number: { density: { enable: true, area: 1000 }, value: 60 }, opacity: { value: 0.5 }, shape: { type: "circle" }, size: { value: { min: 1, max: 3 } } }, detectRetina: true, background: { color: "transparent" } }).catch(error => console.error("tsParticles main error:", error)); observer.disconnect(); break; } } } }); const mainContentNode = document.getElementById('main-content'); if (mainContentNode) observer.observe(mainContentNode, { attributes: true });
+         });
+     </script>
+</body>
+</html>
